@@ -34,22 +34,23 @@ app.post('/api/setPassword', async (req, res) => {
   }
 });
 
-// Get passwords for a specific site and user
+// Get passwords by user, and optionally filter by site
 app.get('/api/getPassword', async (req, res) => {
   const { site, user } = req.query;
-  if (!site || !user) return res.status(400).json({ error: 'Missing site or user' });
+  if (!user) return res.status(400).json({ error: 'Missing user' });
 
-  const { data, error } = await supabase
-    .from('passwords')
-    .select('*')
-    .eq('site', site)
-    .eq('user', user);
+  let query = supabase.from('passwords').select('*').eq('user', user);
 
-if (error) {
-  console.error("Supabase insert error:", error); // <-- ADD THIS LINE
-  throw error;
-}
+  if (site) {
+    query = query.eq('site', site);
+  }
 
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Supabase fetch error:", error);
+    return res.status(500).json({ error: 'Failed to fetch passwords' });
+  }
 
   res.json(data);
 });
