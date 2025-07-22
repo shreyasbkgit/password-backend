@@ -1,13 +1,18 @@
-const db = [];
+import supabase from './supabaseClient.js';
 
 export async function savePassword(site, password) {
-  db.push({ site, password });
-}
-
-export async function getPassword(site) {
-  return db.find(p => p.site === site);
+  const { error } = await supabase.from('passwords').insert([{ site, password }]);
+  if (error) {
+    console.error('Error saving password:', error);
+    throw error;
+  }
 }
 
 export async function getAllPasswords() {
-  return db;
+  const { data, error } = await supabase.from('passwords').select('*');
+  if (error) {
+    console.error('Error fetching passwords:', error);
+    throw error;
+  }
+  return data;
 }
