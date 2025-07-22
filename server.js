@@ -1,7 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import { savePassword, getAllPasswords } from './util/db.js';
 import supabase from './util/supabaseClient.js';
 
 const app = express();
@@ -10,27 +9,35 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Save password API
-app.post('/api/addPassword', async (req, res) => {
-  const { site, password, user, username } = req.body;
+// Save or update password
+app.post('/api/setPassword', async (req, res) => {
+  const { id, site, password, user, username } = req.body;
   if (!site || !password || !user) {
-    return res.status(400).json({ error: 'Missing parameters' });
+    return res.status(400).json({ error: 'Missing required fields' });
   }
-  const { error } = await supabase
-    .from('passwords')
-    .insert([{ site, password, user, username }]);
-  if (error) {
-    console.error('Error saving password:', error);
-    return res.status(500).json({ error: 'Database error' });
+
+  const record = { site, password, user, username };
+
+  try {
+    if (id) {
+      const { error } = await supabase.from('passwords').update(record).eq('id', id);
+      if (error) throw error;
+      res.status(200).json({ message: 'Password updated' });
+    } else {
+      const { error } = await supabase.from('passwords').insert([record]);
+      if (error) throw error;
+      res.status(200).json({ message: 'Password saved' });
+    }
+  } catch (err) {
+    console.error('Save/Update error:', err);
+    res.status(500).json({ error: 'Database error' });
   }
-  res.json({ message: 'Password saved' });
 });
 
-// Get password API (now filters by site AND user)
+// Get passwords for a specific site and user
 app.get('/api/getPassword', async (req, res) => {
   const { site, user } = req.query;
-
-  if (!site || !user) return res.status(400).json({ error: 'Missing parameters' });
+  if (!site || !user) return res.status(400).json({ error: 'Missing site or user' });
 
   const { data, error } = await supabase
     .from('passwords')
@@ -38,12 +45,29 @@ app.get('/api/getPassword', async (req, res) => {
     .eq('site', site)
     .eq('user', user);
 
-  if (error) {
-    console.error('Error fetching passwords:', error);
-    return res.status(500).json({ error: 'Database error' });
-  }
+if (error) {
+  console.error("Supabase insert error:", error); // <-- ADD THIS LINE
+  throw error;
+}
+
 
   res.json(data);
 });
 
-app.listen(PORT, () => console.log('Server running on port', PORT));
+// Delete password
+app.post('/api/deletePassword', async (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: 'Missing ID' });
+
+  const { error } = await supabase.from('passwords').delete().eq('id', id);
+  if (error) {
+    console.error('Delete error:', error);
+    return res.status(500).json({ error: 'Failed to delete' });
+  }
+
+  res.status(200).json({ message: 'Deleted successfully' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

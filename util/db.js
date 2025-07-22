@@ -1,29 +1,35 @@
 import supabase from './supabaseClient.js';
 
-// Save or update password entry
-export async function savePassword({ id, site, password, username, user }) {
+
+export async function savePassword({ id, site, username, password, user }) {
+  const payload = { site, username, password, user };
+
   if (id) {
-    // Update existing record
     const { error } = await supabase
-      .from('passwords')
-      .update({ site, username, password })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error updating password:', error);
-      throw error;
-    }
+      .from("passwords")
+      .update(payload)
+      .eq("id", id);
+    if (error) throw error;
   } else {
-    // Insert new record
     const { error } = await supabase
-      .from('passwords')
-      .insert([{ site, username, password, user }]);
-
-    if (error) {
-      console.error('Error saving password:', error);
-      throw error;
-    }
+      .from("passwords")
+      .insert([payload]);
+    if (error) throw error;
   }
+}
+
+export async function getAllPasswords() {
+  const { data, error } = await supabase
+    .from('passwords')
+    .select('*')
+    .eq('user', user);
+
+  if (error) {
+    console.error('Error fetching passwords:', error);
+    throw error;
+  }
+
+  return data;
 }
 
 // Fetch all passwords for a specific user
