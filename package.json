@@ -8,6 +8,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
     "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^4.21.2"
   }
