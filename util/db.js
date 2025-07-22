@@ -1,22 +1,37 @@
 import supabase from './supabaseClient.js';
 
-// Save password with optional username
-export async function savePassword(site, password, username = null) {
-  const { error } = await supabase
-    .from('passwords')
-    .insert([{ site, password, username }]);
+// Save or update password entry
+export async function savePassword({ id, site, password, username, user }) {
+  if (id) {
+    // Update existing record
+    const { error } = await supabase
+      .from('passwords')
+      .update({ site, username, password })
+      .eq('id', id);
 
-  if (error) {
-    console.error('Error saving password:', error);
-    throw error;
+    if (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+  } else {
+    // Insert new record
+    const { error } = await supabase
+      .from('passwords')
+      .insert([{ site, username, password, user }]);
+
+    if (error) {
+      console.error('Error saving password:', error);
+      throw error;
+    }
   }
 }
 
-// Get all stored passwords (with username)
-export async function getAllPasswords() {
+// Fetch all passwords for a specific user
+export async function getPasswordsByUser(user) {
   const { data, error } = await supabase
     .from('passwords')
-    .select('site, password, username');
+    .select('*')
+    .eq('user', user);
 
   if (error) {
     console.error('Error fetching passwords:', error);
@@ -24,4 +39,17 @@ export async function getAllPasswords() {
   }
 
   return data;
+}
+
+// Delete password entry by ID
+export async function deletePassword(id) {
+  const { error } = await supabase
+    .from('passwords')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting password:', error);
+    throw error;
+  }
 }
