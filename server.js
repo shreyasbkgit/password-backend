@@ -1,28 +1,49 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import cors from 'cors'; // ✅ 1. Import cors
+import cors from 'cors';
 import { savePassword, getAllPasswords } from './util/db.js';
+import supabase from './util/supabaseClient.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // ✅ 2. Enable CORS for all routes
+app.use(cors());
 app.use(bodyParser.json());
 
 // Save password API
 app.post('/api/addPassword', async (req, res) => {
-  const { site, password } = req.body;
-  if (!site || !password) return res.status(400).json({ error: 'Missing parameters' });
-  await savePassword(site, password);
+  const { site, password, user, username } = req.body;
+  if (!site || !password || !user) {
+    return res.status(400).json({ error: 'Missing parameters' });
+  }
+  const { error } = await supabase
+    .from('passwords')
+    .insert([{ site, password, user, username }]);
+  if (error) {
+    console.error('Error saving password:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
   res.json({ message: 'Password saved' });
 });
 
-// Get password API
+// Get password API (now filters by site AND user)
 app.get('/api/getPassword', async (req, res) => {
-  const { site } = req.query;
-  const all = await getAllPasswords();
-  const filtered = all.filter(p => p.site === site);
-  res.json(filtered);
+  const { site, user } = req.query;
+
+  if (!site || !user) return res.status(400).json({ error: 'Missing parameters' });
+
+  const { data, error } = await supabase
+    .from('passwords')
+    .select('*')
+    .eq('site', site)
+    .eq('user', user);
+
+  if (error) {
+    console.error('Error fetching passwords:', error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+
+  res.json(data);
 });
 
 app.listen(PORT, () => console.log('Server running on port', PORT));
